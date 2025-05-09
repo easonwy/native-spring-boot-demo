@@ -1,0 +1,81 @@
+name: Build Native Image and Push to DockerHub
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-native-image:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: easonwu/native-spring-boot-demo
+      APP_NAME: native-spring-boot-demo
+
+    steps:
+      - name: 🔄 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: ☕ Set up Java and Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 📦 Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: 🏗️ Build native image with GraalVM container
+        run: |
+          docker run --rm \
+            -v "$HOME/.m2":/root/.m2 \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            ghcr.io/graalvm/graalvm-ce:ol8-java17 \
+            ./mvnw -Pnative -DskipTests clean package
+
+      - name: 🔍 Determine binary type and generate Dockerfile
+        run: |
+          if ldd target/${{ env.APP_NAME }} 2>&1 | grep -q "not a dynamic executable"; then
+            echo "Static binary detected. Using distroless..."
+            cat > Dockerfile <<EOF
+  FROM gcr.io/distroless/static
+  WORKDIR /app
+  COPY target/${{ env.APP_NAME }} .
+  EXPOSE 8080
+  ENTRYPOINT ["./${{ env.APP_NAME }}"]
+  EOF
+  else
+  echo "Dynamic binary detected. Using debian:bookworm-slim..."
+  cat > Dockerfile <<EOF
+  FROM debian:bookworm-slim
+  RUN apt-get update && apt-get install -y --no-install-recommends \\
+  libz1 \\
+  ca-certificates && \\
+  apt-get clean && rm -rf /var/lib/apt/lists/*
+  WORKDIR /app
+  COPY target/${{ env.APP_NAME }} .
+  EXPOSE 8080
+  ENTRYPOINT ["./${{ env.APP_NAME }}"]
+  EOF
+  fi
+
+- name: 🔐 Log in to DockerHub
+  uses: docker/login-action@v3
+  with:
+    username: ${{ secrets.DOCKER_USERNAME }}
+    password: ${{ secrets.DOCKER_PASSWORD }}
+
+- name: 📦 Build and push Docker image
+  run: |
+    docker build -t $IMAGE_NAME:latest .
+    docker push $IMAGE_NAME:latest
