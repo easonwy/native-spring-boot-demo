@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: native-spring-boot-demo
+
+  profiles:
+    active: local
+
+  main:
+    allow-circular-references: true # 允许循环依赖，因为项目是三层架构，无法避免这个情况。
+
+  config:
+    import:
+      - optional:classpath:application-${spring.profiles.active}.yaml # 加载【本地】配置
+      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yaml # 加载【Nacos】的配置

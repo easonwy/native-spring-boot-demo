@@ -1,0 +1,16 @@
+--- #################### 注册中心 + 配置中心相关配置 ####################
+spring:
+  cloud:
+    nacos:
+      server-addr: http://18.100.212.27:48848
+      discovery: # 【配置中心】配置项
+        namespace: eason # 命名空间。这里使用 local 开发环境
+        group: DEFAULT_GROUP # 使用的 Nacos 配置分组，默认为 DEFAULT_GROUP
+        username: nacos
+        password: AmJDwuZB
+      config: # 【注册中心】配置项
+        namespace: eason # 命名空间。这里使用 local 开发环境
+        group: DEFAULT_GROUP # 使用的 Nacos 配置分组，默认为 DEFAULT_GROUP
+        username: nacos
+        password: AmJDwuZB
+        access-key: hH8m72kYjA8FVWJ/Y4JQ9YkTv5L0pb7fIxi4QgJjcbY=
