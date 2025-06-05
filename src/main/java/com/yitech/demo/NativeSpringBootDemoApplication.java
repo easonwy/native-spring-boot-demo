@@ -20,6 +20,7 @@ public class NativeSpringBootDemoApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(NativeSpringBootDemoApplication.class, args);
+		System.out.println("你好世界！");
 	}
 
 }
